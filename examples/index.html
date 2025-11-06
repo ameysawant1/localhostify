@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to LocalHostify!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .feature h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .feature p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .status {
+            background: #00c851;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin: 30px 0;
+            font-weight: 600;
+        }
+        
+        .api-demo {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .api-demo h4 {
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+        
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        #api-result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            color: #b3e5fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🌐</div>
+        <h1>LocalHostify</h1>
+        <p class="subtitle">Your Windows PC is now hosting this website!</p>
+        
+        <div class="status">
+            ✅ Server Running Successfully
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📁</div>
+                <h3>Static Files</h3>
+                <p>Serves HTML, CSS, JS, images and any other files from your chosen directory</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <h3>API Proxy</h3>
+                <p>Forwards API requests to your local backend servers automatically</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <h3>HTTPS Ready</h3>
+                <p>Optional self-signed SSL certificates for secure local development</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🌍</div>
+                <h3>Public Access</h3>
+                <p>Get your public IP and DNS instructions to share globally</p>
+            </div>
+        </div>
+
+        <div class="api-demo">
+            <h4>🧪 Test API Proxy (backend auto-detection):</h4>
+            <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 15px;">
+                💡 Automatically tries network IP first, then falls back to localhost
+            </p>
+            <button onclick="testAPI()">Test API Call</button>
+            <button onclick="testHealth()">Test Health Check</button>
+            <div id="api-result"></div>
+        </div>
+        
+        <div class="footer">
+            <p>🎉 <strong>Congratulations!</strong> LocalHostify is working perfectly.</p>
+            <p>Made with ❤️ for the Windows developer community</p>
+        </div>
+    </div>
+
+    <script>
+        /*
+         * testAPI() — calls the backend directly at the network IP by default.
+         * - Direct backend URL (current): Uses network IP for cross-device access
+         * - Localhost URL: http://127.0.0.1:3000/api/test (local only)
+         * - LocalHostify proxy URL: '/api/test'
+         *   Use this path if you prefer LocalHostify to proxy requests to your
+         *   backend (run LocalHostify with --proxy-to 3000). To switch to proxy,
+         *   replace the fetch URL below with: await fetch('/api/test')
+         */
+        async function testAPI() {
+            const result = document.getElementById('api-result');
+            result.textContent = 'Testing API connection...';
+
+            // Try network IP first (for cross-device access), fallback to localhost
+            const networkIP = '192.168.0.102'; // Your PC's network IP
+            const urls = [
+                `http://${networkIP}:3000/api/test`,
+                'http://127.0.0.1:3000/api/test'
+            ];
+
+            for (let i = 0; i < urls.length; i++) {
+                try {
+                    result.textContent = `Testing ${i === 0 ? 'network' : 'localhost'} backend...`;
+                    const response = await fetch(urls[i]);
+                    
+                    if (response.ok) {
+                        const data = await response.text();
+                        const location = i === 0 ? 'Network' : 'Localhost';
+                        result.textContent = `✅ ${location} API Response: ${data}`;
+                        return; // Success, exit the loop
+                    } else {
+                        if (i === urls.length - 1) {
+                            result.textContent = `⚠️ API returned status ${response.status}: ${response.statusText}`;
+                        }
+                    }
+                } catch (error) {
+                    if (i === urls.length - 1) {
+                        result.textContent = `❌ API Error: ${error.message}\n\nThis is expected if no backend is running on port 3000.\nStart your backend with: node server.js`;
+                    }
+                }
+            }
+        }
+
+        async function testHealth() {
+            const result = document.getElementById('api-result');
+            result.textContent = 'Testing LocalHostify health endpoint...';
+            
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    const data = await response.text();
+                    result.textContent = `✅ Health Check: ${data}`;
+                } else {
+                    result.textContent = `❌ Health check failed: ${response.status}`;
+                }
+            } catch (error) {
+                result.textContent = `❌ Health Check Error: ${error.message}`;
+            }
+        }
+        
+        // Display current URL info
+        document.addEventListener('DOMContentLoaded', function() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            
+            console.log(`🌐 LocalHostify serving from ${protocol}//${hostname}:${port}`);
+            
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                console.log('💡 This is local access. For external access, use your public IP and configure DNS.');
+            }
+        });
+    </script>
+</body>
+</html>

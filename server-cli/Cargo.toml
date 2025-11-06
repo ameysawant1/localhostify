@@ -1,0 +1,47 @@
+[package]
+name = "server-cli"
+version = "0.1.0"
+edition = "2021"
+description = "LocalHostify CLI server for static file serving and backend proxying"
+
+[[bin]]
+name = "server-cli"
+path = "src/main.rs"
+
+[dependencies]
+# HTTP Server
+axum = { workspace = true, features = ["macros"] }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["fs", "cors", "trace"] }
+hyper = { workspace = true }
+tokio = { workspace = true }
+
+# Network & HTTP Client  
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# SSL/TLS (optional)
+rcgen = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+tokio-rustls = { workspace = true, optional = true }
+rustls-pemfile = { version = "2.0", optional = true }
+hyper-util = { version = "0.1", features = ["tokio"], optional = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+
+# Error Handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+
+[features]
+default = ["ssl"]
+ssl = ["rcgen", "rustls", "tokio-rustls", "rustls-pemfile", "hyper-util"]

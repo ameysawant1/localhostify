@@ -1,0 +1,21 @@
+{
+  "name": "localhostify-backend",
+  "version": "1.0.0",
+  "description": "Test backend server for LocalHostify development and testing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "localhostify",
+    "backend",
+    "api",
+    "test-server"
+  ],
+  "author": "LocalHostify",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

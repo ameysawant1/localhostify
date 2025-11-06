@@ -1,0 +1,47 @@
+[workspace]
+members = ["server-cli"]
+default-members = ["server-cli"]
+resolver = "2"
+
+[workspace.dependencies]
+# HTTP Server
+axum = "0.7"
+tower = { version = "0.5", features = ["util"] }
+tower-http = "0.5"
+hyper = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+
+# Network & HTTP Client
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# SSL/TLS
+rcgen = "0.12"
+rustls = "0.22"
+tokio-rustls = "0.25"
+rustls-pemfile = "2.0"
+hyper-util = { version = "0.1", features = ["tokio"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI & Configuration
+clap = { version = "4.0", features = ["derive"] }
+dirs = "5.0"
+
+# Error Handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[profile.release]
+# Optimize for small binary size and performance
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
