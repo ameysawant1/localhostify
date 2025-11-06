@@ -5,12 +5,13 @@ use axum::{
     Router,
 };
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 use std::{
     net::SocketAddr,
     path::PathBuf,
     sync::Arc,
 };
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task::JoinHandle};
 use tower::util::ServiceExt;
 use tower_http::{
     cors::CorsLayer,
@@ -28,25 +29,110 @@ use network::{get_public_ip, get_local_ips};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Root directory to serve files from
-    #[arg(short, long, value_name = "DIR")]
-    root: PathBuf,
+    /// Root directory to serve files from (single site mode)
+    #[arg(short, long, value_name = "DIR", conflicts_with = "config")]
+    root: Option<PathBuf>,
 
-    /// Port to listen on
-    #[arg(short, long, default_value_t = 8080)]
+    /// Port to listen on (single site mode)
+    #[arg(short, long, default_value_t = 8080, conflicts_with = "config")]
     port: u16,
 
-    /// Enable HTTPS with self-signed certificate
-    #[arg(long)]
+    /// Enable HTTPS with self-signed certificate (single site mode)
+    #[arg(long, conflicts_with = "config")]
     https: bool,
 
-    /// Backend port to proxy non-file requests to (optional)
-    #[arg(long, value_name = "PORT")]
+    /// Backend port to proxy non-file requests to (single site mode)
+    #[arg(long, value_name = "PORT", conflicts_with = "config")]
     proxy_to: Option<u16>,
 
     /// Host to bind to
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
+
+    /// Configuration file for multi-site setup
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,
+
+    /// Add a site (can be used multiple times)
+    #[arg(long, value_parser = parse_site_config, conflicts_with = "config")]
+    site: Vec<SiteConfig>,
+}
+
+#[derive(Debug, Clone)]
+struct SiteConfig {
+    name: String,
+    root: PathBuf,
+    port: u16,
+    https: bool,
+    proxy_to: Option<u16>,
+}
+
+fn parse_site_config(s: &str) -> Result<SiteConfig, String> {
+    // Format: name:root:port[:https][:proxy=PORT]
+    let parts: Vec<&str> = s.split(':').collect();
+    
+    if parts.len() < 3 {
+        return Err("Site format should be: name:root:port[:https][:proxy=PORT]".to_string());
+    }
+
+    let name = parts[0].to_string();
+    let root = PathBuf::from(parts[1]);
+    let port: u16 = parts[2].parse().map_err(|_| "Invalid port number".to_string())?;
+    
+    let mut https = false;
+    let mut proxy_to = None;
+    
+    // Parse optional flags
+    for part in &parts[3..] {
+        match *part {
+            "https" => https = true,
+            part if part.starts_with("proxy=") => {
+                let proxy_port = part[6..].parse::<u16>()
+                    .map_err(|_| "Invalid proxy port number".to_string())?;
+                proxy_to = Some(proxy_port);
+            }
+            _ => return Err(format!("Unknown site option: {}", part)),
+        }
+    }
+
+    if !root.exists() {
+        return Err(format!("Root directory does not exist: {}", root.display()));
+    }
+
+    Ok(SiteConfig {
+        name,
+        root,
+        port,
+        https,
+        proxy_to,
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MultiSiteConfig {
+    sites: Vec<ConfigSite>,
+    host: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ConfigSite {
+    name: String,
+    root: PathBuf,
+    port: u16,
+    https: Option<bool>,
+    proxy_to: Option<u16>,
+}
+
+impl From<ConfigSite> for SiteConfig {
+    fn from(config_site: ConfigSite) -> Self {
+        Self {
+            name: config_site.name,
+            root: config_site.root,
+            port: config_site.port,
+            https: config_site.https.unwrap_or(false),
+            proxy_to: config_site.proxy_to,
+        }
+    }
 }
 
 #[tokio::main]
@@ -60,53 +146,118 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let cli = Cli::parse();
-
-    // Validate root directory exists
-    if !cli.root.exists() {
-        error!("Root directory does not exist: {}", cli.root.display());
+    
+    // Determine sites to run
+    let sites = resolve_sites(&cli).await?;
+    
+    if sites.is_empty() {
+        error!("No sites configured. Use --root for single site or --site for multiple sites or --config for config file");
         std::process::exit(1);
     }
-
-    if !cli.root.is_dir() {
-        error!("Root path is not a directory: {}", cli.root.display());
-        std::process::exit(1);
+    
+    // Display network information
+    display_network_info(&sites).await;
+    
+    // Check for port conflicts
+    let mut used_ports = std::collections::HashSet::new();
+    for site in &sites {
+        if used_ports.contains(&site.port) {
+            error!("Port conflict: Multiple sites trying to use port {}", site.port);
+            std::process::exit(1);
+        }
+        used_ports.insert(site.port);
     }
+    
+    if sites.len() == 1 {
+        // Single site mode - run directly
+        run_single_site(&sites[0], &cli.host).await?;
+    } else {
+        // Multi-site mode - spawn multiple servers
+        run_multi_sites(sites, &cli.host).await?;
+    }
+    
+    Ok(())
+}
 
+async fn resolve_sites(cli: &Cli) -> Result<Vec<SiteConfig>, Box<dyn std::error::Error>> {
+    if let Some(config_path) = &cli.config {
+        // Load from config file
+        load_sites_from_config(config_path).await
+    } else if !cli.site.is_empty() {
+        // Use CLI site arguments
+        Ok(cli.site.clone())
+    } else if let Some(root) = &cli.root {
+        // Single site mode
+        validate_directory(root)?;
+        Ok(vec![SiteConfig {
+            name: "main".to_string(),
+            root: root.clone(),
+            port: cli.port,
+            https: cli.https,
+            proxy_to: cli.proxy_to,
+        }])
+    } else {
+        Ok(vec![])
+    }
+}
+
+async fn load_sites_from_config(config_path: &PathBuf) -> Result<Vec<SiteConfig>, Box<dyn std::error::Error>> {
+    if !config_path.exists() {
+        return Err(format!("Configuration file not found: {}", config_path.display()).into());
+    }
+    
+    let content = tokio::fs::read_to_string(config_path).await?;
+    let config: MultiSiteConfig = if config_path.extension().and_then(|s| s.to_str()) == Some("json") {
+        serde_json::from_str(&content)?
+    } else {
+        // Assume TOML
+        toml::from_str(&content)?
+    };
+    
+    let mut sites = Vec::new();
+    for config_site in config.sites {
+        validate_directory(&config_site.root)?;
+        sites.push(config_site.into());
+    }
+    
+    Ok(sites)
+}
+
+fn validate_directory(root: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    if !root.exists() {
+        return Err(format!("Root directory does not exist: {}", root.display()).into());
+    }
+    if !root.is_dir() {
+        return Err(format!("Root path is not a directory: {}", root.display()).into());
+    }
+    Ok(())
+}
+
+async fn run_single_site(site: &SiteConfig, host: &str) -> Result<(), Box<dyn std::error::Error>> {
     let config = ServerConfig {
-        root_dir: cli.root.clone(),
-        port: cli.port,
-        host: cli.host.clone(),
-        https_enabled: cli.https,
-        proxy_port: cli.proxy_to,
+        root_dir: site.root.clone(),
+        port: site.port,
+        host: host.to_string(),
+        https_enabled: site.https,
+        proxy_port: site.proxy_to,
     };
 
-    // Create application state
     let state = Arc::new(AppState::new(config));
-
-    // Display network information
-    display_network_info(&cli).await;
-
-    // Build the router
     let app = build_router(state.clone()).await?;
-
-    // Create listener
-    let addr: SocketAddr = format!("{}:{}", cli.host, cli.port).parse()?;
+    let addr: SocketAddr = format!("{}:{}", host, site.port).parse()?;
     let listener = TcpListener::bind(addr).await?;
 
-    let protocol = if cli.https { "https" } else { "http" };
-    info!("LocalHostify server starting...");
-    info!("📁 Serving directory: {}", cli.root.display());
-    info!("🌐 Local URL: {}://localhost:{}", protocol, cli.port);
-    info!("🌍 Network URL: {}://{}:{}", protocol, cli.host, cli.port);
+    let protocol = if site.https { "https" } else { "http" };
+    info!("🚀 LocalHostify server starting...");
+    info!("📁 Serving: {} → {}://{}:{}", site.root.display(), protocol, host, site.port);
     
-    if let Some(proxy_port) = cli.proxy_to {
+    if let Some(proxy_port) = site.proxy_to {
         info!("🔄 Proxying API requests to localhost:{}", proxy_port);
     }
 
-    info!("🚀 Server ready! Press Ctrl+C to stop");
+    info!("✅ Server ready! Press Ctrl+C to stop");
 
-    // Run the server
-    if cli.https {
+    if site.https {
         #[cfg(feature = "ssl")]
         {
             run_https_server(listener, app, state).await?;
@@ -117,8 +268,86 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(1);
         }
     } else {
-        // Use axum::serve which works with TcpListener directly
         axum::serve(listener, app).await?;
+    }
+
+    Ok(())
+}
+
+async fn run_multi_sites(sites: Vec<SiteConfig>, host: &str) -> Result<(), Box<dyn std::error::Error>> {
+    info!("🚀 LocalHostify multi-site server starting...");
+    info!("📊 Running {} sites:", sites.len());
+    
+    let mut handles: Vec<JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>> = Vec::new();
+    
+    for site in sites {
+        let host = host.to_string();
+        let handle = tokio::spawn(async move {
+            run_site_server(site, &host).await
+        });
+        handles.push(handle);
+    }
+    
+    info!("✅ All servers ready! Press Ctrl+C to stop");
+    
+    // Wait for all servers (or until one fails)
+    let (result, _index, _remaining) = futures::future::select_all(handles).await;
+    
+    match result {
+        Ok(Ok(())) => {
+            info!("Server completed successfully");
+            Ok(())
+        }
+        Ok(Err(e)) => {
+            error!("Server error: {}", e);
+            Err(e)
+        }
+        Err(e) => {
+            error!("Task join error: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn run_site_server(site: SiteConfig, host: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let config = ServerConfig {
+        root_dir: site.root.clone(),
+        port: site.port,
+        host: host.to_string(),
+        https_enabled: site.https,
+        proxy_port: site.proxy_to,
+    };
+
+    let state = Arc::new(AppState::new(config));
+    let app = build_router(state.clone()).await.map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { 
+        Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+    })?;
+    
+    let addr: SocketAddr = format!("{}:{}", host, site.port).parse()
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })?;
+    let listener = TcpListener::bind(addr).await
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })?;
+
+    let protocol = if site.https { "https" } else { "http" };
+    info!("   📁 {} → {}://{}:{}", site.name, protocol, host, site.port);
+    
+    if let Some(proxy_port) = site.proxy_to {
+        info!("   🔄 {} proxying API → localhost:{}", site.name, proxy_port);
+    }
+
+    if site.https {
+        #[cfg(feature = "ssl")]
+        {
+            run_https_server(listener, app, state).await
+                .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) })?;
+        }
+        #[cfg(not(feature = "ssl"))]
+        {
+            return Err("HTTPS requested but SSL feature not enabled".into());
+        }
+    } else {
+        axum::serve(listener, app).await
+            .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { Box::new(e) })?;
     }
 
     Ok(())
@@ -248,30 +477,27 @@ async fn health_check() -> &'static str {
     "LocalHostify server is healthy"
 }
 
-async fn display_network_info(cli: &Cli) {
+async fn display_network_info(sites: &[SiteConfig]) {
     info!("🔍 Detecting network configuration...");
     
     // Get local IPs
-    match get_local_ips().await {
+    let local_ip = match get_local_ips().await {
         Ok(local_ips) => {
             if local_ips.is_empty() {
                 warn!("No local IP addresses found");
+                None
             } else {
                 info!("💻 Local IP addresses:");
-                for ip in local_ips {
+                for ip in &local_ips {
                     info!("   • {}", ip);
                 }
+                Some(local_ips[0])
             }
         }
         Err(e) => {
             warn!("Failed to detect local IPs: {}", e);
+            None
         }
-    }
-
-    // Get local IPs for network access instructions
-    let local_ip = match get_local_ips().await {
-        Ok(ips) if !ips.is_empty() => Some(ips[0].clone()),
-        _ => None,
     };
 
     // Get public IP
@@ -279,38 +505,64 @@ async fn display_network_info(cli: &Cli) {
         Ok(public_ip) => {
             info!("🌍 Public IP address: {}", public_ip);
             info!("");
-            info!("🌐 Network Access Instructions:");
             
-            if let Some(local) = &local_ip {
-                let protocol = if cli.https { "https" } else { "http" };
-                info!("   📱 Local Network (same WiFi): {}://{}:{}", protocol, local, cli.port);
-                info!("      → Test this URL on your phone first!");
-            }
-            
-            info!("   🌍 Internet Access (requires router setup):");
-            info!("      1. Configure port forwarding on your router:");
-            if let Some(local) = &local_ip {
-                info!("         • External Port: {} → Internal IP: {} Port: {}", cli.port, local, cli.port);
+            if sites.len() == 1 {
+                let site = &sites[0];
+                info!("🌐 Access URLs:");
+                let protocol = if site.https { "https" } else { "http" };
+                
+                info!("   📱 Local: {}://localhost:{}", protocol, site.port);
+                if let Some(local) = &local_ip {
+                    info!("   📱 Network: {}://{}:{}", protocol, local, site.port);
+                }
+                info!("   🌍 Internet: {}://{}:{}", protocol, public_ip, site.port);
+                
+                if let Some(proxy_port) = site.proxy_to {
+                    info!("   🔄 API Proxy: Forwarding /api/* to localhost:{}", proxy_port);
+                }
             } else {
-                info!("         • External Port: {} → Internal IP: YOUR_LOCAL_IP Port: {}", cli.port, cli.port);
+                info!("� Multi-Site Access URLs:");
+                for site in sites {
+                    let protocol = if site.https { "https" } else { "http" };
+                    info!("   📁 {} (port {}):", site.name, site.port);
+                    info!("      📱 Local: {}://localhost:{}", protocol, site.port);
+                    if let Some(local) = &local_ip {
+                        info!("      📱 Network: {}://{}:{}", protocol, local, site.port);
+                    }
+                    info!("      🌍 Internet: {}://{}:{}", protocol, public_ip, site.port);
+                    
+                    if let Some(proxy_port) = site.proxy_to {
+                        info!("      🔄 API Proxy → localhost:{}", proxy_port);
+                    }
+                }
             }
-            info!("      2. Allow port {} through Windows Firewall", cli.port);
-            info!("         → Run: .\\setup-firewall.ps1 (as Administrator)");
-            
-            let protocol = if cli.https { "https" } else { "http" };
-            info!("      3. Access via: {}://{}:{}", protocol, public_ip, cli.port);
             
             info!("");
-            info!("� Domain Setup (optional):");
-            info!("   1. Create A record: @ → {}", public_ip);
-            info!("   2. Wait 15-60 minutes for DNS propagation");
+            info!("🛠️  Network Setup:");
+            info!("   1. Port forwarding: Configure router for ports: {}", 
+                sites.iter().map(|s| s.port.to_string()).collect::<Vec<_>>().join(", "));
+            info!("   2. Windows Firewall: Run setup-firewall.ps1 as Administrator");
+            info!("   3. DNS Setup: Create A record → {}", public_ip);
+            
         }
         Err(e) => {
             warn!("Failed to detect public IP: {}", e);
-            if let Some(local) = &local_ip {
-                let protocol = if cli.https { "https" } else { "http" };
-                info!("� Local Network Access: {}://{}:{}", protocol, local, cli.port);
+            
+            if sites.len() == 1 {
+                let site = &sites[0];
+                let protocol = if site.https { "https" } else { "http" };
+                info!("📱 Local Access: {}://localhost:{}", protocol, site.port);
+                if let Some(local) = &local_ip {
+                    info!("📱 Network Access: {}://{}:{}", protocol, local, site.port);
+                }
+            } else {
+                info!("📱 Multi-Site Local Access:");
+                for site in sites {
+                    let protocol = if site.https { "https" } else { "http" };
+                    info!("   {} → {}://localhost:{}", site.name, protocol, site.port);
+                }
             }
+            
             info!("💡 Find your public IP at: https://whatismyipaddress.com");
         }
     }

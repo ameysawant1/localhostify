@@ -1,0 +1,30 @@
+{
+  "sites": [
+    {
+      "name": "main",
+      "root": "examples",
+      "port": 8080,
+      "https": false,
+      "proxy_to": 3000
+    },
+    {
+      "name": "portfolio",
+      "root": "examples/portfolio",
+      "port": 8081,
+      "https": false
+    },
+    {
+      "name": "blog",
+      "root": "examples/blog",
+      "port": 8082,
+      "https": false,
+      "proxy_to": 3000
+    },
+    {
+      "name": "docs",
+      "root": "docs",
+      "port": 8083,
+      "https": false
+    }
+  ]
+}

@@ -87,3 +87,6 @@ __pycache__/
 # Package manager lockfiles (keep package.json, ignore locks for examples)
 test-backend/package-lock.json
 examples/package-lock.json
+
+
+/examples/
