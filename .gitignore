@@ -1,7 +1,17 @@
 # Rust
 /target/
 **/*.rs.bk
-Cargo.lock
+server-cli/target/
+
+# Node.js / Electron
+node_modules/
+dist/
+out/
+
+# Build artifacts
+*.exe
+*.pdb
+*.dll
 
 # IDE
 .vscode/
@@ -25,9 +35,6 @@ pids
 *.seed
 *.pid.lock
 
-# Dependency directories
-node_modules/
-
 # Optional npm cache directory
 .npm
 
@@ -47,7 +54,14 @@ node_modules/
 .env.test.local
 .env.production.local
 
-# Tauri
+# Electron build output
+release/
+app/
+installer/
+
+# Development files
+*.tmp
+*.temp
 src-tauri/target
 src-tauri/Cargo.lock
 

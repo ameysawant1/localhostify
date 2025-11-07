@@ -1,129 +1,253 @@
-# LocalHostify 🚀<<<<<<< Updated upstream
+# LocalHostify Desktop
 
-# localhostify
 
-> **Multi-site local hosting server in Rust** - Host multiple websites and backends from your PC with zero configuration pain.LocalHostify - Windows-first local hosting app in Rust. Host static sites and backends from your PC with a friendly GUI.
-
-=======
-
-[![Build Status](https://github.com/ameysawant1/localhostify/workflows/CI/badge.svg)](https://github.com/ameysawant1/localhostify/actions)# LocalHostify
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> **Windows-first local hosting app in Rust** - Host static sites and backends from your PC with zero configuration pain.
-
-## 🌟 What is LocalHostify?
-
-[![Build Status](https://github.com/ameysawant1/localhostify/workflows/CI/badge.svg)](https://github.com/ameysawant1/localhostify/actions)
-
-LocalHostify is a powerful Rust-based server that lets you host **multiple websites simultaneously** from your personal computer. Perfect for developers, agencies, and anyone managing multiple web projects - no complex configuration required![![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A modern desktop application for managing multiple local development sites with ease. Built with Electron and React, featuring a Rust-powered server backend.# localhostify
 
 
 
-### ✨ Key Features## 🚀 What is LocalHostify?
+## 🚀 Features> **Multi-site local hosting server in Rust** - Host multiple websites and backends from your PC with zero configuration pain.LocalHostify - Windows-first local hosting app in Rust. Host static sites and backends from your PC with a friendly GUI.
 
 
 
-- **🏢 Multi-Site Hosting** - Run multiple websites on different ports concurrentlyLocalHostify is a lightweight Windows desktop application that lets you host static websites or backends from your personal computer with a friendly GUI. No Linux servers, no complex configuration - just select your project folder, click start, and you're live!
+- **Multi-site Management**: Host and manage multiple websites simultaneously=======
 
-- **🖥️ Windows Native** - Built for Windows 10/11, lightweight and fast
+- **Desktop App**: Native desktop application with modern UI
 
-- **📁 Flexible Configuration** - CLI arguments or configuration files (TOML/JSON)### ✨ Key Features (MVP)
+- **Real-time Control**: Start, stop, and monitor sites with live status updates[![Build Status](https://github.com/ameysawant1/localhostify/workflows/CI/badge.svg)](https://github.com/ameysawant1/localhostify/actions)# LocalHostify
+
+- **Port Management**: Automatic port assignment and conflict resolution
+
+- **Proxy Support**: Forward requests to backend development servers[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+- **HTTPS Support**: Optional HTTPS with self-signed certificates
+
+- **Cross-platform**: Works on Windows, macOS, and Linux> **Windows-first local hosting app in Rust** - Host static sites and backends from your PC with zero configuration pain.
+
+
+
+## 📁 Project Structure## 🌟 What is LocalHostify?
+
+
+
+```[![Build Status](https://github.com/ameysawant1/localhostify/workflows/CI/badge.svg)](https://github.com/ameysawant1/localhostify/actions)
+
+LocalHostify/
+
+├── electron/           # Electron main process and preload scriptsLocalHostify is a powerful Rust-based server that lets you host **multiple websites simultaneously** from your personal computer. Perfect for developers, agencies, and anyone managing multiple web projects - no complex configuration required![![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+│   ├── main.cjs       # Electron main process
+
+│   └── preload.cjs    # Security preload script for IPC
+
+├── src/               # React frontend source
+
+│   ├── App.jsx        # Main React application### ✨ Key Features## 🚀 What is LocalHostify?
+
+│   ├── main.jsx       # React entry point
+
+│   └── styles.css     # Application styles
+
+├── server-cli/        # Rust server backend
+
+│   ├── src/           # Rust source code- **🏢 Multi-Site Hosting** - Run multiple websites on different ports concurrentlyLocalHostify is a lightweight Windows desktop application that lets you host static websites or backends from your personal computer with a friendly GUI. No Linux servers, no complex configuration - just select your project folder, click start, and you're live!
+
+│   └── Cargo.toml     # Rust dependencies
+
+├── examples/          # Sample websites for testing- **🖥️ Windows Native** - Built for Windows 10/11, lightweight and fast
+
+├── public/            # Static assets
+
+└── electron build config files- **📁 Flexible Configuration** - CLI arguments or configuration files (TOML/JSON)### ✨ Key Features (MVP)
+
+```
 
 - **🌐 Smart Networking** - Automatic local and public IP detection  
 
+## 🛠️ Development Setup
+
 - **🔌 API Proxy Support** - Individual backend proxy settings per site- **🖥️ Windows Native** - Single installer, works on Windows 10/11
 
-- **🔒 HTTPS Ready** - Optional SSL certificates for each site- **📁 Drag & Drop** - Select any folder and serve it instantly  
+### Prerequisites
 
-- **⚡ Blazing Fast** - Rust + Tokio async performance- **🌐 Smart Networking** - Shows your local URL and public IP automatically
+- Node.js (v18+)- **🔒 HTTPS Ready** - Optional SSL certificates for each site- **📁 Drag & Drop** - Select any folder and serve it instantly  
 
-- **🔄 Hot Configuration** - Easy setup changes without rebuilding- **🔗 DNS Made Simple** - Clear instructions for pointing your domain to your PC
+- npm or yarn
 
-- **🔒 HTTPS Ready** - Optional self-signed certificates for secure local development
+- Rust (latest stable)- **⚡ Blazing Fast** - Rust + Tokio async performance- **🌐 Smart Networking** - Shows your local URL and public IP automatically
 
-## 🎯 Perfect For- **⚡ Fast & Lightweight** - Rust-powered performance, <100MB install size
 
-- **🔄 Auto-Updates** - Seamlessly stay up-to-date via GitHub releases
+
+### Installation- **🔄 Hot Configuration** - Easy setup changes without rebuilding- **🔗 DNS Made Simple** - Clear instructions for pointing your domain to your PC
+
+
+
+1. **Clone and install dependencies:**- **🔒 HTTPS Ready** - Optional self-signed certificates for secure local development
+
+```bash
+
+git clone <repository-url>## 🎯 Perfect For- **⚡ Fast & Lightweight** - Rust-powered performance, <100MB install size
+
+cd LocalHostify
+
+npm install- **🔄 Auto-Updates** - Seamlessly stay up-to-date via GitHub releases
+
+```
 
 - **Development Teams** - Host multiple app environments simultaneously
 
-- **Agencies & Freelancers** - Showcase multiple client projects  ## 🎯 Perfect For
+2. **Build the Rust server:**
 
-- **Portfolio Sites** - Display different projects on separate ports
+```bash- **Agencies & Freelancers** - Showcase multiple client projects  ## 🎯 Perfect For
 
-- **Microservices** - Frontend for multiple backend services- **Makers & Developers** - Host your portfolio, blog, or app prototypes
+cd server-cli
 
-- **Documentation** - Host docs alongside main applications- **Students & Educators** - Share projects instantly without cloud complexity  
+cargo build --release- **Portfolio Sites** - Display different projects on separate ports
 
-- **Small Businesses** - Simple website hosting from your existing PC
+cd ..
+
+```- **Microservices** - Frontend for multiple backend services- **Makers & Developers** - Host your portfolio, blog, or app prototypes
+
+
+
+3. **Start development:**- **Documentation** - Host docs alongside main applications- **Students & Educators** - Share projects instantly without cloud complexity  
+
+```bash
+
+npm run electron:dev- **Small Businesses** - Simple website hosting from your existing PC
+
+```
 
 ## 🛠 Quick Start- **Hobbyists** - Show off your creations to friends and family
 
+## 📦 Available Scripts
 
 
-### Single Site (Original Mode)## � Quick Start
 
-```powershell
+- `npm run dev` - Start Vite development server
+
+- `npm run build` - Build for production### Single Site (Original Mode)## � Quick Start
+
+- `npm run electron:dev` - Start Electron in development mode
+
+- `npm run electron:pack` - Package app for current platform```powershell
+
+- `npm run electron:dist` - Build distributable installers
 
 # Basic static hosting### MVP Version (CLI)
 
+## 🏗️ Building for Production
+
 server-cli.exe --port 8080 --root examples
 
-The desktop GUI is coming soon! For now, you can use the powerful CLI version:
+### Build for current platform:
 
-# With API proxy to backend
+```bashThe desktop GUI is coming soon! For now, you can use the powerful CLI version:
 
-server-cli.exe --port 8080 --root examples --proxy-to 3000#### 1. **Prerequisites**
+npm run electron:pack
 
-```powershell
+```# With API proxy to backend
+
+
+
+### Build distributables:server-cli.exe --port 8080 --root examples --proxy-to 3000#### 1. **Prerequisites**
+
+```bash
+
+npm run electron:dist```powershell
+
+```
 
 # HTTPS enabled# Install Rust (one-time setup)
 
-server-cli.exe --port 8443 --root examples --httpswinget install Rustlang.Rust.MSVC
+This will create installers for:
 
-```
+- **Windows**: NSIS installer (.exe)server-cli.exe --port 8443 --root examples --httpswinget install Rustlang.Rust.MSVC
 
-# Install Visual Studio Build Tools (for compilation)
+- **macOS**: DMG (.dmg)
 
-### Multi-Site CLIwinget install Microsoft.VisualStudio.2022.BuildTools
+- **Linux**: AppImage (.AppImage)```
 
-```powershell```
+
+
+## 🔧 Configuration# Install Visual Studio Build Tools (for compilation)
+
+
+
+The app stores configuration in the user data directory:### Multi-Site CLIwinget install Microsoft.VisualStudio.2022.BuildTools
+
+- **Windows**: `%APPDATA%\localhostify-desktop\`
+
+- **macOS**: `~/Library/Application Support/localhostify-desktop/````powershell```
+
+- **Linux**: `~/.config/localhostify-desktop/`
 
 # Host multiple sites with CLI arguments
 
+## 💡 Usage
+
 server-cli.exe \#### 2. **Clone and Build**
 
-  --site "main:examples:8080:proxy=3000" \```powershell
+1. **Add a Site**: Click "Add Site" and configure your local website
 
-  --site "portfolio:examples/portfolio:8081" \# Clone the repository
+2. **Start Serving**: Click the start button to begin hosting  --site "main:examples:8080:proxy=3000" \```powershell
 
-  --site "blog:examples/blog:8082:proxy=3000" \git clone https://github.com/ameysawant1/localhostify.git
+3. **Monitor Status**: View real-time status and access URLs
 
-  --site "docs:docs:8083"cd localhostify
+4. **Manage Sites**: Start, stop, edit, or remove sites as needed  --site "portfolio:examples/portfolio:8081" \# Clone the repository
 
-```
+
+
+## 🔒 Security  --site "blog:examples/blog:8082:proxy=3000" \git clone https://github.com/ameysawant1/localhostify.git
+
+
+
+The app uses Electron's security best practices:  --site "docs:docs:8083"cd localhostify
+
+- Context isolation enabled
+
+- Node integration disabled```
+
+- Secure IPC communication via preload scripts
 
 # Build the CLI server
 
+## 🤝 Contributing
+
 ### Multi-Site Configuration Filecargo build --release -p server-cli
 
-```powershell```
+1. Fork the repository
 
-# Using TOML configuration
+2. Create a feature branch```powershell```
+
+3. Make your changes
+
+4. Test thoroughly# Using TOML configuration
+
+5. Submit a pull request
 
 server-cli.exe --config sites.toml#### 3. **Test with Example Site**
 
+## 📄 License
+
 ```powershell
+
+MIT License - see LICENSE file for details
 
 # Using JSON configuration  # Run the beautiful example site
 
+## 🔗 Technologies
+
 server-cli.exe --config sites.jsoncargo run -p server-cli -- --root examples --port 8080
 
-```
+- **Frontend**: React, Tailwind CSS, Vite
 
-# Open in browser
+- **Desktop**: Electron```
 
+- **Backend**: Rust (Axum web framework)
+
+- **Build**: electron-builder# Open in browser
+
+- **Development**: Hot reload, DevTools
 ## 📋 Installationstart http://localhost:8080
 
 ```
